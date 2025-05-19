@@ -1,5 +1,5 @@
+//controllers/user.controller.js
 const User = require("../models/user.model");
-
 // Get logged-in user's profile
 exports.getMyProfile = async (req, res) => {
   const user = await User.findById(req.user.id).select("-password");

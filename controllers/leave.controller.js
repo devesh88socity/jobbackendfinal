@@ -1,3 +1,4 @@
+//controllers/leave.controller.js
 const mongoose = require("mongoose");
 const Leave = require("../models/leave.model");
 const User = require("../models/user.model");
