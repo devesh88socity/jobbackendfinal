@@ -1,4 +1,3 @@
-//routes/user.routes.js
 const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/user.controller");
@@ -7,22 +6,44 @@ const allowRoles = require("../middlewares/role.middleware");
 
 router.use(authenticate);
 
-// Any user can check their own profile
+/**
+ * @route   GET /users/me
+ * @desc    Get logged-in user's profile
+ */
 router.get("/me", userController.getMyProfile);
 
-// Admin: Get all users
+/**
+ * @route   GET /users/
+ * @desc    Get all users (Admin only)
+ */
 router.get("/", allowRoles("Admin"), userController.getAllUsers);
 
-// Admin: Get a specific user by ID
+/**
+ * @route   GET /users/:id
+ * @desc    Get a specific user by ID (Admin only)
+ */
 router.get("/:id", allowRoles("Admin"), userController.getUserById);
 
-// Admin: Update user role
+/**
+ * @route   PATCH /users/:id/role
+ * @desc    Update user role (Admin only)
+ */
 router.patch("/:id/role", allowRoles("Admin"), userController.updateUserRole);
 
-// Admin: Update leave balance for a user
-router.patch("/leave/:id", allowRoles("Admin"), userController.updateLeaves);
+/**
+ * @route   PUT /users/:id/leaves
+ * @desc    Update leave balance (Admin only)
+ */
+router.put(
+  "/:id/leaves",
+  allowRoles("Admin"),
+  userController.updateLeaveBalance
+);
 
-// Admin: Assign team member to a manager
+/**
+ * @route   POST /users/assign-team
+ * @desc    Assign team member to a manager (Admin only)
+ */
 router.post(
   "/assign-team",
   allowRoles("Admin"),

@@ -1,4 +1,3 @@
-//routes/leave.routes.js
 const express = require("express");
 const router = express.Router();
 
@@ -12,6 +11,7 @@ router.use(authenticate);
 /**
  * @route   POST /leaves/apply
  * @desc    Apply for leave (Employee or Manager)
+ * @body    { startDate, endDate, reason, leaveType, isHalfDay }
  */
 router.post(
   "/apply",
@@ -30,6 +30,16 @@ router.get(
 );
 
 /**
+ * @route   PATCH /leaves/:id/cancel
+ * @desc    Cancel a pending leave request (Employee or Manager)
+ */
+router.patch(
+  "/:id/cancel",
+  allowRoles("Employee", "Manager"),
+  leaveController.cancelLeave
+);
+
+/**
  * @route   GET /leaves/team
  * @desc    Get leave requests submitted to this manager/admin
  */
@@ -42,6 +52,7 @@ router.get(
 /**
  * @route   PATCH /leaves/:id/status
  * @desc    Approve/Reject a leave request
+ * @body    { status, managerRemarks }
  */
 router.patch(
   "/:id/status",

@@ -5,21 +5,38 @@ const User = require("../models/user.model");
 
 // Employee: Apply for leave
 exports.applyLeave = async (req, res) => {
-  const { startDate, endDate } = req.body;
+  const {
+    startDate,
+    endDate,
+    reason,
+    leaveType = "Casual",
+    isHalfDay = false,
+  } = req.body;
 
-  if (!startDate || !endDate) {
-    return res.status(400).json({ message: "Start and end date are required" });
+  if (!startDate || !endDate || !reason) {
+    return res
+      .status(400)
+      .json({ message: "Start date, end date, and reason are required" });
   }
 
-  if (new Date(endDate) < new Date(startDate)) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  if (end < start) {
     return res
       .status(400)
       .json({ message: "End date cannot be before start date" });
   }
 
+  const days = isHalfDay ? 0.5 : (end - start) / (1000 * 60 * 60 * 24) + 1;
+
+  const employee = await User.findById(req.user.id);
+  if (!employee) {
+    return res.status(404).json({ message: "Employee not found" });
+  }
+
   const manager = await User.findOne({
     role: "Manager",
-    team: req.user.id, // Let Mongoose handle casting
+    team: req.user.id,
   });
 
   if (!manager) {
@@ -28,9 +45,14 @@ exports.applyLeave = async (req, res) => {
 
   const leave = new Leave({
     user: req.user.id,
-    startDate,
-    endDate,
+    startDate: start,
+    endDate: end,
+    reason,
+    leaveType,
+    isHalfDay,
+    days,
     requestedTo: manager._id,
+    leaveBalanceAtRequest: employee.leaves,
   });
 
   await leave.save();
@@ -58,7 +80,7 @@ exports.getTeamLeaves = async (req, res) => {
 // Manager/Admin: Update leave status
 exports.updateLeaveStatus = async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, managerRemarks } = req.body;
 
   if (!["Approved", "Rejected"].includes(status)) {
     return res.status(400).json({ message: "Invalid status" });
@@ -66,9 +88,46 @@ exports.updateLeaveStatus = async (req, res) => {
 
   const leave = await Leave.findById(id);
   if (!leave) return res.status(404).json({ message: "Leave not found" });
+  if (leave.status !== "Pending") {
+    return res.status(400).json({ message: "Leave already processed" });
+  }
 
   leave.status = status;
+  if (managerRemarks) {
+    leave.managerRemarks = managerRemarks;
+  }
+
   await leave.save();
 
+  // Optional: Deduct leaves if approved
+  if (status === "Approved") {
+    const user = await User.findById(leave.user);
+    if (user) {
+      user.leaves = Math.max(0, user.leaves - leave.days);
+      await user.save();
+    }
+  }
+
   res.json({ message: `Leave ${status.toLowerCase()}`, leave });
+};
+
+// Cancel leave (by employee before approval)
+exports.cancelLeave = async (req, res) => {
+  const { id } = req.params;
+
+  const leave = await Leave.findOne({ _id: id, user: req.user.id });
+
+  if (!leave) return res.status(404).json({ message: "Leave not found" });
+  if (leave.status !== "Pending") {
+    return res
+      .status(400)
+      .json({ message: "Only pending leaves can be cancelled" });
+  }
+
+  leave.isCancelled = true;
+  leave.status = "Rejected";
+  leave.managerRemarks = "Cancelled by employee";
+  await leave.save();
+
+  res.json({ message: "Leave cancelled", leave });
 };
