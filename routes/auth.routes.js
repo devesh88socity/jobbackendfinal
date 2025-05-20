@@ -35,6 +35,18 @@ router.get(
       secure: process.env.NODE_ENV === "production", // Only secure in production
     });
 
+    // Determine redirect URL based on user role
+    let redirectPath = "/unauthorized";
+    if (user.role === "Admin") {
+      redirectPath = "/admin/dashboard";
+    } else if (user.role === "Manager") {
+      redirectPath = "/manager/dashboard";
+    } else if (user.role === "Employee") {
+      redirectPath = "/employee/dashboard";
+    }
+
+    // Redirect to frontend URL with path
+    res.redirect(`${process.env.FRONTEND_URL}${redirectPath}`);
     res.status(200).json({ token, user });
   }
 );
