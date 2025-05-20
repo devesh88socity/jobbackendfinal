@@ -1,3 +1,4 @@
+const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 
 // Get logged-in user's profile
@@ -50,7 +51,18 @@ exports.updateUserRole = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.json({ message: `Role updated to ${role}`, user });
+    // Generate a new token for the updated user
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.json({ message: `Role updated to ${role}`, token, user });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }

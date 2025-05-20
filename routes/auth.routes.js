@@ -47,7 +47,7 @@ router.get(
 
     // Redirect to frontend URL with path
     res.redirect(`${process.env.FRONTEND_URL}${redirectPath}`);
-    res.status(200).json({ token, user });
+    // res.status(200).json({ token, user });
   }
 );
 
