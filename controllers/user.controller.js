@@ -142,9 +142,7 @@ exports.updateLeaveBalance = async (req, res) => {
 exports.updateUserDetails = async (req, res) => {
   try {
     const userId = req.params.id;
-    const { role, leaveBalance } = req.body;
-
-    leaves = leaveBalance;
+    const { role, leaves } = req.body;
 
     const updateFields = {};
 
