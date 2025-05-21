@@ -50,4 +50,10 @@ router.put(
   userController.updateLeaveBalance
 );
 
+/**
+ * @route   PATCH /users/:id
+ * @desc    Update user details like role and/or leave balance (Admin only)
+ */
+router.patch("/:id", allowRoles("Admin"), userController.updateUserDetails);
+
 module.exports = router;

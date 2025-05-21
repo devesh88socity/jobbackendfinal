@@ -137,3 +137,59 @@ exports.updateLeaveBalance = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+// Admin: Update user details (role and/or leave balance)
+exports.updateUserDetails = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { role, leaveBalance } = req.body;
+
+    leaves = leaveBalance;
+
+    const updateFields = {};
+
+    // Validate and set role if provided
+    if (role) {
+      const validRoles = ["Employee", "Manager", "Admin"];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      updateFields.role = role;
+    }
+
+    // Validate and set leave balance if provided
+    if (leaves != null) {
+      if (isNaN(leaves)) {
+        return res
+          .status(400)
+          .json({ message: "Leave balance must be a number" });
+      }
+      updateFields.leaves = leaves;
+    }
+
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({ message: "No valid fields to update" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateFields },
+      { new: true }
+    );
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({
+      message: "User details updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        leaves: user.leaves,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
