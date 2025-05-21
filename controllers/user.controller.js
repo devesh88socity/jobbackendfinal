@@ -51,18 +51,18 @@ exports.updateUserRole = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Generate a new token for the updated user
-    const token = jwt.sign(
-      {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    // // Generate a new token for the updated user
+    // const token = jwt.sign(
+    //   {
+    //     id: user._id,
+    //     email: user.email,
+    //     role: user.role,
+    //   },
+    //   process.env.JWT_SECRET,
+    //   { expiresIn: "1d" }
+    // );
 
-    res.json({ message: `Role updated to ${role}`, token, user });
+    res.json({ message: `Role updated to ${role}`, user });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -71,8 +71,12 @@ exports.updateUserRole = async (req, res) => {
 // Admin: Assign employee to manager's team
 exports.assignTeamMember = async (req, res) => {
   try {
-    const { managerId, employeeId } = req.body;
+    console.log("hello");
+    const { managerId, employeeIds } = req.body;
+    console.log(employeeIds);
+    const employeeId = employeeIds[0];
 
+    console.log(managerId, employeeId);
     const [manager, employee] = await Promise.all([
       User.findById(managerId),
       User.findById(employeeId),

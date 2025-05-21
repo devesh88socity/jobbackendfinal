@@ -26,28 +26,31 @@ router.get(
   "/google/callback",
   passport.authenticate("google", { session: false }),
   (req, res) => {
-    const { token, user } = req.user;
+    const { accessToken, refreshToken, user } = req.user;
 
-    // Send token to frontend (cookie or JSON)
-    res.cookie("token", token, {
+    // Set refreshToken as cookie
+    res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       sameSite: "Lax",
-      secure: process.env.NODE_ENV === "production", // Only secure in production
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    // Determine redirect URL based on user role
-    let redirectPath = "/unauthorized";
-    if (user.role === "Admin") {
-      redirectPath = "/admin/dashboard";
-    } else if (user.role === "Manager") {
-      redirectPath = "/manager/dashboard";
-    } else if (user.role === "Employee") {
-      redirectPath = "/employee/dashboard";
-    }
+    // ✅ Set accessToken as cookie
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      sameSite: "Lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
 
-    // Redirect to frontend URL with path
+    // Determine redirect path
+    let redirectPath = "/unauthorized";
+    if (user.role === "Admin") redirectPath = "/admin/dashboard";
+    else if (user.role === "Manager") redirectPath = "/manager/dashboard";
+    else if (user.role === "Employee") redirectPath = "/employee/dashboard";
+
     res.redirect(`${process.env.FRONTEND_URL}${redirectPath}`);
-    // res.status(200).json({ token, user });
   }
 );
 
@@ -59,6 +62,8 @@ router.get(
  * @route   GET /auth/refresh
  * @desc    Get a fresh token if user role or permissions have changed
  */
-router.get("/refresh", authenticate, authController.refreshToken);
+router.get("/refresh-token", authController.refreshToken);
+
+router.post("/logout", authController.userLogout);
 
 module.exports = router;

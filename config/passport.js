@@ -26,13 +26,27 @@ passport.use(
           await user.save();
         }
 
-        const token = jwt.sign(
+        // Generate short-lived access token
+        const accessTokenJWT = jwt.sign(
           { id: user._id, role: user.role },
           process.env.JWT_SECRET,
-          { expiresIn: "1d" }
+          { expiresIn: "15m" } // shorter-lived access token
         );
-
-        return done(null, { token, user });
+        console.log(accessTokenJWT);
+        // Generate long-lived refresh token
+        const refreshTokenJWT = jwt.sign(
+          { id: user._id },
+          process.env.REFRESH_TOKEN_SECRET,
+          { expiresIn: "7d" }
+        );
+        console.log(refreshTokenJWT);
+        console.log(user);
+        // Pass both tokens
+        return done(null, {
+          accessToken: accessTokenJWT,
+          refreshToken: refreshTokenJWT,
+          user,
+        });
       } catch (err) {
         return done(err, null);
       }

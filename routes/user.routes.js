@@ -19,6 +19,16 @@ router.get("/me", userController.getMyProfile);
 router.get("/", allowRoles("Admin"), userController.getAllUsers);
 
 /**
+ * @route   POST /users/assign-team
+ * @desc    Assign team member to a manager (Admin only)
+ */
+router.post(
+  "/assign-team",
+  allowRoles("Admin"),
+  userController.assignTeamMember
+);
+
+/**
  * @route   GET /users/:id
  * @desc    Get a specific user by ID (Admin only)
  */
@@ -38,16 +48,6 @@ router.put(
   "/:id/leaves",
   allowRoles("Admin"),
   userController.updateLeaveBalance
-);
-
-/**
- * @route   POST /users/assign-team
- * @desc    Assign team member to a manager (Admin only)
- */
-router.post(
-  "/assign-team",
-  allowRoles("Admin"),
-  userController.assignTeamMember
 );
 
 module.exports = router;
