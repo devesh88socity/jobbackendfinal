@@ -44,13 +44,15 @@ router.get(
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
-    // Determine redirect path
-    let redirectPath = "/unauthorized";
-    if (user.role === "Admin") redirectPath = "/admin/dashboard";
-    else if (user.role === "Manager") redirectPath = "/manager/dashboard";
-    else if (user.role === "Employee") redirectPath = "/employee/dashboard";
+    // // Determine redirect path
+    // let redirectPath = "/unauthorized";
+    // if (user.role === "Admin") redirectPath = "/admin/dashboard";
+    // else if (user.role === "Manager") redirectPath = "/manager/dashboard";
+    // else if (user.role === "Employee") redirectPath = "/employee/dashboard";
 
-    res.redirect(`${process.env.FRONTEND_URL}${redirectPath}`);
+    res.redirect(
+      `${process.env.FRONTEND_URL}/auth/success?accessToken=${accessToken}`
+    );
   }
 );
 
