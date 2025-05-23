@@ -232,25 +232,26 @@ exports.updateUserDetails = async (req, res) => {
   }
 };
 
-// Show all teams with manager and their team members
 exports.getAllTeams = async (req, res) => {
   try {
-    // Find all managers
+    // Find all users with role "Manager" and populate their "team" field
     const managers = await User.find({ role: "Manager" }).populate({
       path: "team",
-      select: "name email", // Select fields to return for team members
+      select: "name email", // Only include necessary fields
     });
 
+    // Format the response as expected by frontend
     const teams = managers.map((manager) => ({
       managerName: manager.name,
       managerEmail: manager.email,
       teamMembers: manager.team.map((member) => ({
+        _id: member._id,
         name: member.name,
         email: member.email,
       })),
     }));
 
-    res.json({ teams });
+    res.json(teams);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
