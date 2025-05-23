@@ -107,6 +107,46 @@ exports.assignTeamMember = async (req, res) => {
   }
 };
 
+// Admin: Unassign employee from manager's team
+exports.unassignTeamMember = async (req, res) => {
+  try {
+    const { managerId, employeeIds } = req.body;
+    const employeeId = employeeIds[0];
+
+    const [manager, employee] = await Promise.all([
+      User.findById(managerId),
+      User.findById(employeeId),
+    ]);
+
+    if (!manager || manager.role !== "Manager") {
+      return res
+        .status(400)
+        .json({ message: "Manager not found or invalid role" });
+    }
+
+    if (!employee || employee.role !== "Employee") {
+      return res
+        .status(400)
+        .json({ message: "Employee not found or invalid role" });
+    }
+
+    if (!manager.team.includes(employeeId)) {
+      return res.status(409).json({ message: "Employee not in the team" });
+    }
+
+    // Remove employeeId from manager.team array
+    manager.team = manager.team.filter(
+      (id) => id.toString() !== employeeId.toString()
+    );
+
+    await manager.save();
+
+    res.json({ message: "Employee unassigned from manager", manager });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 // Admin: Update leave balance for any user
 exports.updateLeaveBalance = async (req, res) => {
   try {
@@ -187,6 +227,30 @@ exports.updateUserDetails = async (req, res) => {
         leaves: user.leaves,
       },
     });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Show all teams with manager and their team members
+exports.getAllTeams = async (req, res) => {
+  try {
+    // Find all managers
+    const managers = await User.find({ role: "Manager" }).populate({
+      path: "team",
+      select: "name email", // Select fields to return for team members
+    });
+
+    const teams = managers.map((manager) => ({
+      managerName: manager.name,
+      managerEmail: manager.email,
+      teamMembers: manager.team.map((member) => ({
+        name: member.name,
+        email: member.email,
+      })),
+    }));
+
+    res.json({ teams });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }

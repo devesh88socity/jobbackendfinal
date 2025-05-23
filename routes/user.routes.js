@@ -7,6 +7,17 @@ const allowRoles = require("../middlewares/role.middleware");
 router.use(authenticate);
 
 /**
+ * @route   GET /users/teams
+ * @desc    Get all teams with manager and team member details
+ * @access  Employee
+ */
+router.get(
+  "/teams",
+  allowRoles("Employee", "Manager", "Admin"), // Optional: you can limit this to Employee only
+  userController.getAllTeams
+);
+
+/**
  * @route   GET /users/me
  * @desc    Get logged-in user's profile
  */
@@ -55,5 +66,15 @@ router.put(
  * @desc    Update user details like role and/or leave balance (Admin only)
  */
 router.patch("/:id", allowRoles("Admin"), userController.updateUserDetails);
+
+/**
+ * @route   POST /users/unassign-team
+ * @desc    Unassign team member from a manager (Admin only)
+ */
+router.post(
+  "/unassign-team",
+  allowRoles("Admin"),
+  userController.unassignTeamMember
+);
 
 module.exports = router;
