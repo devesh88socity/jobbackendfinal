@@ -46,6 +46,12 @@ router.post(
 router.get("/:id", allowRoles("Admin"), userController.getUserById);
 
 /**
+ * @route   DELETE /users/:id
+ * @desc    Delete user by ID (Admin only)
+ */
+router.delete("/:id", allowRoles("Admin"), userController.deleteUser);
+
+/**
  * @route   PATCH /users/:id/role
  * @desc    Update user role (Admin only)
  */

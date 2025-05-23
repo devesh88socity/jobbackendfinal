@@ -256,3 +256,25 @@ exports.getAllTeams = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+// Admin: Delete user by ID
+exports.deleteUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    // Optionally, prevent admin from deleting themselves
+    if (req.user.id === userId) {
+      return res
+        .status(400)
+        .json({ message: "Admin cannot delete themselves" });
+    }
+
+    const user = await User.findByIdAndDelete(userId);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({ message: `User ${user.name} deleted successfully` });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
