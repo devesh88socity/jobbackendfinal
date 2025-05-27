@@ -8,6 +8,8 @@ const allowRoles = require("../middlewares/role.middleware");
 // All routes require authentication
 router.use(authenticate);
 
+router.get("/", allowRoles("Admin"), leaveController.getAllLeavesByMonth);
+
 /**
  * @route   POST /leaves/apply
  * @desc    Apply for leave (Employee or Manager)

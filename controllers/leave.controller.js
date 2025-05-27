@@ -148,3 +148,45 @@ exports.getLeavesByEmployee = async (req, res) => {
     res.status(500).json({ message: "Error fetching leaves", error });
   }
 };
+
+exports.getAllLeavesByMonth = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+
+    if (!month || !year) {
+      return res.status(400).json({ message: "Month and year are required." });
+    }
+
+    const parsedMonth = parseInt(month);
+    const parsedYear = parseInt(year);
+
+    if (isNaN(parsedMonth) || isNaN(parsedYear)) {
+      return res
+        .status(400)
+        .json({ message: "Month and year must be valid numbers." });
+    }
+
+    const startDate = new Date(parsedYear, parsedMonth - 1, 1);
+    const endDate = new Date(parsedYear, parsedMonth, 0, 23, 59, 59);
+
+    const leaves = await Leave.find({
+      startDate: { $lte: endDate },
+      endDate: { $gte: startDate },
+    }).populate("user", "name email");
+
+    const formatted = leaves.map((leave) => ({
+      employeeName: leave.user?.name || "N/A",
+      email: leave.user?.email || "N/A",
+      fromDate: leave.startDate.toISOString().split("T")[0],
+      toDate: leave.endDate.toISOString().split("T")[0],
+      status: leave.status,
+    }));
+
+    return res.status(200).json(formatted);
+  } catch (err) {
+    console.error("Error fetching leaves by month:", err);
+    return res
+      .status(500)
+      .json({ message: "Server error while fetching leaves." });
+  }
+};
