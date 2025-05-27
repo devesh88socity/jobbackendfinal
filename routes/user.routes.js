@@ -17,6 +17,14 @@ router.get(
   userController.getAllTeams
 );
 
+router.get("/managers", allowRoles("Admin"), userController.getManagers);
+
+router.get(
+  "/teams/:managerId",
+  allowRoles("Admin"),
+  userController.getTeamMembers
+);
+
 /**
  * @route   GET /users/me
  * @desc    Get logged-in user's profile
@@ -83,4 +91,7 @@ router.post(
   userController.unassignTeamMember
 );
 
+// Routes
+
+// router.get("/leaves/:employeeId", userController.getLeavesByEmployee);
 module.exports = router;

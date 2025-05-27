@@ -33,6 +33,10 @@ router.get(
  * @route   PATCH /leaves/:id/cancel
  * @desc    Cancel a pending leave request (Employee or Manager)
  */
+
+//Admin can see the leaves of employee by its id
+router.get("/:employeeId", leaveController.getLeavesByEmployee);
+
 router.patch(
   "/:id/cancel",
   allowRoles("Employee", "Manager"),

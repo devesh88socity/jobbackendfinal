@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 
@@ -276,5 +277,37 @@ exports.deleteUser = async (req, res) => {
     res.json({ message: `User ${user.name} deleted successfully` });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Get all managers
+exports.getManagers = async (req, res) => {
+  try {
+    console.log("Hello workld");
+    const managers = await User.find({ role: "Manager" }).select("_id name");
+    res.json(managers);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching managers", error });
+  }
+};
+
+//Get all the team members
+exports.getTeamMembers = async (req, res) => {
+  try {
+    const { managerId } = req.params;
+
+    // Find the manager and populate their team array
+    const manager = await User.findById(managerId).populate({
+      path: "team",
+      select: "_id name email role",
+    });
+
+    if (!manager) {
+      return res.status(404).json({ message: "Manager not found" });
+    }
+
+    res.json(manager.team);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching team members", error });
   }
 };

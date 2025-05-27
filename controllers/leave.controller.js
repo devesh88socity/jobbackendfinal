@@ -131,3 +131,20 @@ exports.cancelLeave = async (req, res) => {
 
   res.json({ message: "Leave cancelled", leave });
 };
+
+exports.getLeavesByEmployee = async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+
+    // Find all leaves where user matches employeeId and is not cancelled
+    const leaves = await Leave.find({ user: employeeId, isCancelled: false })
+      .sort({ startDate: -1 }) // optional: sort latest first
+      .select(
+        "_id startDate endDate status reason leaveType days isHalfDay managerRemarks"
+      );
+
+    res.json(leaves);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching leaves", error });
+  }
+};
