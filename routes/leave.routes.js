@@ -5,15 +5,17 @@ const leaveController = require("../controllers/leave.controller");
 const authenticate = require("../middlewares/auth.middleware");
 const allowRoles = require("../middlewares/role.middleware");
 
-// All routes require authentication
+// Middleware: All routes require authentication
 router.use(authenticate);
 
-router.get("/", allowRoles("Admin"), leaveController.getAllLeavesByMonth);
+/* =========================================================================
+ * Routes for EMPLOYEES & MANAGERS (Self-service)
+ * ========================================================================= */
 
 /**
  * @route   POST /leaves/apply
  * @desc    Apply for leave (Employee or Manager)
- * @body    { startDate, endDate, reason, leaveType, isHalfDay }
+ * @roles   Employee, Manager
  */
 router.post(
   "/apply",
@@ -23,7 +25,8 @@ router.post(
 
 /**
  * @route   GET /leaves/my
- * @desc    Get logged-in user's leave requests
+ * @desc    Get logged-in user's own leave requests
+ * @roles   Employee, Manager
  */
 router.get(
   "/my",
@@ -33,21 +36,23 @@ router.get(
 
 /**
  * @route   PATCH /leaves/:id/cancel
- * @desc    Cancel a pending leave request (Employee or Manager)
+ * @desc    Cancel a pending leave request
+ * @roles   Employee, Manager
  */
-
-//Admin can see the leaves of employee by its id
-router.get("/:employeeId", leaveController.getLeavesByEmployee);
-
 router.patch(
   "/:id/cancel",
   allowRoles("Employee", "Manager"),
   leaveController.cancelLeave
 );
 
+/* =========================================================================
+ * Routes for MANAGERS & ADMINS (Team management)
+ * ========================================================================= */
+
 /**
  * @route   GET /leaves/team
  * @desc    Get leave requests submitted to this manager/admin
+ * @roles   Manager, Admin
  */
 router.get(
   "/team",
@@ -58,12 +63,35 @@ router.get(
 /**
  * @route   PATCH /leaves/:id/status
  * @desc    Approve/Reject a leave request
- * @body    { status, managerRemarks }
+ * @roles   Manager, Admin
  */
 router.patch(
   "/:id/status",
   allowRoles("Manager", "Admin"),
   leaveController.updateLeaveStatus
+);
+
+/* =========================================================================
+ * Routes for ADMINS (Company-wide view)
+ * ========================================================================= */
+
+/**
+ * @route   GET /leaves
+ * @desc    Get all leaves filtered by month and year
+ * @roles   Admin
+ * @query   ?month=&year=
+ */
+router.get("/", allowRoles("Admin"), leaveController.getAllLeavesByMonth);
+
+/**
+ * @route   GET /leaves/:employeeId
+ * @desc    Get leaves by specific employee ID
+ * @roles   Admin
+ */
+router.get(
+  "/:employeeId",
+  allowRoles("Admin"),
+  leaveController.getLeavesByEmployee
 );
 
 module.exports = router;
