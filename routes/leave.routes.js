@@ -24,6 +24,17 @@ router.post(
 );
 
 /**
+ * @route   POST /leaves/manager/apply
+ * @desc    Apply for leave (Manager to Admin)
+ * @roles   Manager
+ */
+router.post(
+  "/manager/apply",
+  allowRoles("Manager"),
+  leaveController.managerApplyLeave
+);
+
+/**
  * @route   GET /leaves/my
  * @desc    Get logged-in user's own leave requests
  * @roles   Employee, Manager

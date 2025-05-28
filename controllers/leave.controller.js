@@ -80,7 +80,7 @@ exports.getTeamLeaves = async (req, res) => {
 // Manager/Admin: Update leave status
 exports.updateLeaveStatus = async (req, res) => {
   const { id } = req.params;
-  const { status, managerRemarks } = req.body;
+  const { status, managerRemarks, adminRemarks } = req.body;
 
   if (!["Approved", "Rejected"].includes(status)) {
     return res.status(400).json({ message: "Invalid status" });
@@ -93,8 +93,12 @@ exports.updateLeaveStatus = async (req, res) => {
   }
 
   leave.status = status;
-  if (managerRemarks) {
+
+  // Assign remarks based on role
+  if (req.user.role === "Manager" && managerRemarks) {
     leave.managerRemarks = managerRemarks;
+  } else if (req.user.role === "Admin" && adminRemarks) {
+    leave.adminRemarks = adminRemarks;
   }
 
   await leave.save();
@@ -189,4 +193,59 @@ exports.getAllLeavesByMonth = async (req, res) => {
       .status(500)
       .json({ message: "Server error while fetching leaves." });
   }
+};
+
+// Manager: Apply for leave (to Admin)
+exports.managerApplyLeave = async (req, res) => {
+  const {
+    startDate,
+    endDate,
+    reason,
+    leaveType = "Casual",
+    isHalfDay = false,
+  } = req.body;
+
+  if (!startDate || !endDate || !reason) {
+    return res
+      .status(400)
+      .json({ message: "Start date, end date, and reason are required" });
+  }
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  if (end < start) {
+    return res
+      .status(400)
+      .json({ message: "End date cannot be before start date" });
+  }
+
+  const days = isHalfDay ? 0.5 : (end - start) / (1000 * 60 * 60 * 24) + 1;
+
+  const manager = await User.findById(req.user.id);
+  if (!manager) {
+    return res.status(404).json({ message: "Manager not found" });
+  }
+
+  // Find the admin(s)
+  const admin = await User.findOne({ role: "Admin" });
+
+  if (!admin) {
+    return res.status(404).json({ message: "No admin assigned" });
+  }
+
+  const leave = new Leave({
+    user: req.user.id,
+    startDate: start,
+    endDate: end,
+    reason,
+    leaveType,
+    isHalfDay,
+    days,
+    requestedTo: admin._id, // Requesting to admin
+    leaveBalanceAtRequest: manager.leaves,
+  });
+
+  await leave.save();
+
+  res.status(201).json({ message: "Leave request submitted to admin", leave });
 };

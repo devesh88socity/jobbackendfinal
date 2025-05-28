@@ -1,4 +1,3 @@
-// models/leave.model.js
 const mongoose = require("mongoose");
 
 const leaveSchema = new mongoose.Schema(
@@ -20,6 +19,7 @@ const leaveSchema = new mongoose.Schema(
       default: "Pending",
     },
     managerRemarks: { type: String, trim: true },
+    adminRemarks: { type: String, trim: true }, // ✅ NEW FIELD
     leaveBalanceAtRequest: { type: Number, min: 0 },
     isCancelled: { type: Boolean, default: false },
     requestedTo: {
