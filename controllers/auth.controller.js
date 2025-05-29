@@ -21,12 +21,12 @@ exports.refreshToken = async (req, res) => {
     const newAccessToken = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1m" }
+      { expiresIn: "15m" }
     );
 
     res.cookie("accessToken", newAccessToken, {
       ...cookieOptions,
-      maxAge: 1 * 60 * 1000, // 15 minutes
+      maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
     // Return only minimal user info, no tokens in JSON

@@ -13,7 +13,7 @@ const accessTokenCookieOptions = {
   httpOnly: true,
   sameSite: "Lax",
   secure: isProduction,
-  maxAge: 1 * 60 * 1000, // 15 minutes
+  maxAge: 15 * 60 * 1000, // 15 minutes
 };
 
 const refreshTokenCookieOptions = {
