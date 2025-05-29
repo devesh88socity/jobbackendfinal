@@ -15,7 +15,11 @@ const authController = require("../controllers/auth.controller");
  */
 router.get(
   "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    accessType: "offline", // 🔴 MUST be added
+    prompt: "consent", // 🔴 Forces Google to send refresh token
+  })
 );
 
 /**

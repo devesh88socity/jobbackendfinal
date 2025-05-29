@@ -36,15 +36,31 @@ exports.refreshToken = async (req, res) => {
     const user = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ message: "User not found" });
 
+    // Issue a new access token
     const newAccessToken = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "15m" }
     );
 
-    res.json({ accessToken: newAccessToken });
+    // Optionally send access token as HTTP-only cookie
+    res.cookie("accessToken", newAccessToken, {
+      httpOnly: true,
+      sameSite: "Lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+
+    return res.json({ accessToken: newAccessToken });
   } catch (err) {
-    res.status(403).json({ message: "Invalid refresh token" });
+    console.error("Refresh token error:", err);
+    // Clear refresh token cookie if invalid
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      sameSite: "Lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+    return res.status(403).json({ message: "Invalid refresh token" });
   }
 };
 

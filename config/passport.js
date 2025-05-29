@@ -10,6 +10,8 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: "/api/auth/google/callback",
+      accessType: "offline",
+      prompt: "consent",
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -22,26 +24,28 @@ passport.use(
             googleId: profile.id,
             role: "Employee", // default role
             leaves: 0,
+            googleRefreshToken: refreshToken, // save refresh token here
           });
+          await user.save();
+        } else if (refreshToken) {
+          // Update refreshToken on every login if it's present (it may be null sometimes)
+          user.googleRefreshToken = refreshToken;
           await user.save();
         }
 
-        // Generate short-lived access token
+        // Generate JWT tokens as before
         const accessTokenJWT = jwt.sign(
           { id: user._id, role: user.role },
           process.env.JWT_SECRET,
-          { expiresIn: "15m" } // shorter-lived access token
+          { expiresIn: "15m" }
         );
-        console.log(accessTokenJWT);
-        // Generate long-lived refresh token
+
         const refreshTokenJWT = jwt.sign(
           { id: user._id },
           process.env.REFRESH_TOKEN_SECRET,
           { expiresIn: "7d" }
         );
-        console.log(refreshTokenJWT);
-        console.log(user);
-        // Pass both tokens
+
         return done(null, {
           accessToken: accessTokenJWT,
           refreshToken: refreshTokenJWT,

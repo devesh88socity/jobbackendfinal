@@ -1,4 +1,3 @@
-// models/user.model.js
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
@@ -20,6 +19,13 @@ const userSchema = new mongoose.Schema(
     },
     leaves: { type: Number, default: 0, min: 0 },
     team: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+    // Add this field to store Google OAuth2 refresh token
+    googleRefreshToken: {
+      type: String,
+      required: false, // not required initially, but will be saved on login
+      select: false, // optional: prevent sending this field by default in queries for security
+    },
   },
   { timestamps: true }
 );
