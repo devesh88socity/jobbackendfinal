@@ -1,33 +1,15 @@
-//controllers/auth.controller.js
 const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 
-// exports.refreshToken = async (req, res) => {
-//   try {
-//     const user = await User.findById(req.user.id);
-//     if (!user) return res.status(404).json({ message: "User not found" });
-
-//     const token = jwt.sign(
-//       {
-//         id: user._id,
-//         email: user.email,
-//         role: user.role,
-//       },
-//       process.env.JWT_SECRET,
-//       { expiresIn: "1d" }
-//     );
-
-//     res.status(200).json({
-//       message: "Token refreshed successfully",
-//       token,
-//       user,
-//     });
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error" });
-//   }
-// };
+// Common cookie options
+const cookieOptions = {
+  httpOnly: true,
+  sameSite: "Lax",
+  secure: process.env.NODE_ENV === "production",
+};
 
 exports.refreshToken = async (req, res) => {
+  console.log("are you called");
   const token = req.cookies.refreshToken;
   if (!token) return res.status(401).json({ message: "No refresh token" });
 
@@ -36,45 +18,42 @@ exports.refreshToken = async (req, res) => {
     const user = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ message: "User not found" });
 
-    // Issue a new access token
     const newAccessToken = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "1m" }
     );
 
-    // Optionally send access token as HTTP-only cookie
     res.cookie("accessToken", newAccessToken, {
-      httpOnly: true,
-      sameSite: "Lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      ...cookieOptions,
+      maxAge: 1 * 60 * 1000, // 15 minutes
     });
 
-    return res.json({ accessToken: newAccessToken });
+    // Return only minimal user info, no tokens in JSON
+    return res.status(200).json({
+      message: "Token refreshed successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
   } catch (err) {
     console.error("Refresh token error:", err);
-    // Clear refresh token cookie if invalid
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      sameSite: "Lax",
-      secure: process.env.NODE_ENV === "production",
-    });
-    return res.status(403).json({ message: "Invalid refresh token" });
+
+    res.clearCookie("refreshToken", cookieOptions);
+
+    const status = err.name === "TokenExpiredError" ? 401 : 403;
+    return res
+      .status(status)
+      .json({ message: "Invalid or expired refresh token" });
   }
 };
 
 exports.userLogout = async (req, res) => {
-  res.clearCookie("accessToken", {
-    httpOnly: true,
-    sameSite: "Lax",
-    secure: process.env.NODE_ENV === "production",
-  });
-  res.clearCookie("refreshToken", {
-    httpOnly: true,
-    sameSite: "Lax",
-    secure: process.env.NODE_ENV === "production",
-  });
+  res.clearCookie("accessToken", cookieOptions);
+  res.clearCookie("refreshToken", cookieOptions);
 
-  res.status(200).json({ message: "Logged out successfully" });
+  return res.status(200).json({ message: "Logged out successfully" });
 };

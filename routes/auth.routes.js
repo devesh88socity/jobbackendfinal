@@ -1,75 +1,75 @@
-//routes/auth.routes.js
+// routes/auth.routes.js
 const express = require("express");
-const router = express.Router();
 const passport = require("passport");
-const authenticate = require("../middlewares/auth.middleware");
+const router = express.Router();
 const authController = require("../controllers/auth.controller");
 
-// ==============================
-// Google OAuth Routes
-// ==============================
+const isProduction = process.env.NODE_ENV === "production";
 
-/**
- * @route   GET /auth/google
- * @desc    Redirect user to Google for authentication
- */
+// ==============================
+// Cookie Options
+// ==============================
+const accessTokenCookieOptions = {
+  httpOnly: true,
+  sameSite: "Lax",
+  secure: isProduction,
+  maxAge: 1 * 60 * 1000, // 15 minutes
+};
+
+const refreshTokenCookieOptions = {
+  httpOnly: true,
+  sameSite: "Lax",
+  secure: isProduction,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
+
+// ==============================
+// @route   GET /auth/google
+// @desc    Redirect user to Google for authentication
+// ==============================
 router.get(
   "/google",
   passport.authenticate("google", {
     scope: ["profile", "email"],
-    accessType: "offline", // 🔴 MUST be added
-    prompt: "consent", // 🔴 Forces Google to send refresh token
+    accessType: "offline",
+    prompt: "consent",
   })
 );
 
-/**
- * @route   GET /auth/google/callback
- * @desc    Handle Google OAuth callback and return JWT
- */
+// ==============================
+// @route   GET /auth/google/callback
+// @desc    Handle Google OAuth callback, issue tokens and redirect
+// ==============================
 router.get(
   "/google/callback",
   passport.authenticate("google", { session: false }),
   (req, res) => {
-    const { accessToken, refreshToken, user } = req.user;
+    try {
+      const { accessToken, refreshToken } = req.user;
 
-    // Set refreshToken as cookie
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      sameSite: "Lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+      // Set tokens in httpOnly cookies
+      res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+      res.cookie("accessToken", accessToken, accessTokenCookieOptions);
 
-    // ✅ Set accessToken as cookie
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      sameSite: "Lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 15 * 60 * 1000, // 15 minutes
-    });
-
-    // // Determine redirect path
-    // let redirectPath = "/unauthorized";
-    // if (user.role === "Admin") redirectPath = "/admin/dashboard";
-    // else if (user.role === "Manager") redirectPath = "/manager/dashboard";
-    // else if (user.role === "Employee") redirectPath = "/employee/dashboard";
-
-    res.redirect(
-      `${process.env.FRONTEND_URL}/auth/success?accessToken=${accessToken}`
-    );
+      // Redirect to success page (no sensitive info in URL)
+      res.redirect(`${process.env.FRONTEND_URL}/auth/success`);
+    } catch (err) {
+      console.error("OAuth Callback Error:", err);
+      res.redirect(`${process.env.FRONTEND_URL}/auth/failure`);
+    }
   }
 );
 
 // ==============================
-// Refresh Token
+// @route   GET /auth/refresh-token
+// @desc    Issue a new access token from refresh token
 // ==============================
-
-/**
- * @route   GET /auth/refresh
- * @desc    Get a fresh token if user role or permissions have changed
- */
 router.get("/refresh-token", authController.refreshToken);
 
+// ==============================
+// @route   POST /auth/logout
+// @desc    Clear cookies and log user out
+// ==============================
 router.post("/logout", authController.userLogout);
 
 module.exports = router;
