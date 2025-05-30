@@ -1,4 +1,3 @@
-// routes/auth.routes.js
 const express = require("express");
 const passport = require("passport");
 const router = express.Router();
@@ -30,7 +29,7 @@ const refreshTokenCookieOptions = {
 router.get(
   "/google",
   passport.authenticate("google", {
-    scope: ["profile", "email"],
+    scope: ["profile", "email", "https://mail.google.com/"],
     accessType: "offline",
     prompt: "consent",
   })
@@ -45,17 +44,20 @@ router.get(
   passport.authenticate("google", { session: false }),
   (req, res) => {
     try {
+      if (!req.user) {
+        return res.redirect(`${process.env.FRONTEND_URL}/auth/failure`);
+      }
+
       const { accessToken, refreshToken } = req.user;
 
-      // Set tokens in httpOnly cookies
-      res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+      // Set secure cookies
       res.cookie("accessToken", accessToken, accessTokenCookieOptions);
+      res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
 
-      // Redirect to success page (no sensitive info in URL)
-      res.redirect(`${process.env.FRONTEND_URL}/auth/success`);
+      return res.redirect(`${process.env.FRONTEND_URL}/auth/success`);
     } catch (err) {
       console.error("OAuth Callback Error:", err);
-      res.redirect(`${process.env.FRONTEND_URL}/auth/failure`);
+      return res.redirect(`${process.env.FRONTEND_URL}/auth/failure`);
     }
   }
 );
