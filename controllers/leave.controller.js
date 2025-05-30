@@ -2,7 +2,8 @@
 const mongoose = require("mongoose");
 const Leave = require("../models/leave.model");
 const User = require("../models/user.model");
-
+const sendLeaveRequestEmail = require("../utils/sendLeaveRequestEmail"); // adjust path as needed
+const sendLeaveStatusEmail = require("../utils/sendLeaveStatusEmail");
 // Employee: Apply for leave
 exports.applyLeave = async (req, res) => {
   const {
@@ -56,6 +57,21 @@ exports.applyLeave = async (req, res) => {
   });
 
   await leave.save();
+  try {
+    console.log("hi red");
+    await sendLeaveRequestEmail(
+      manager.email,
+      employee.name,
+      startDate,
+      endDate,
+      reason
+    );
+  } catch (error) {
+    console.error(
+      "Failed to send leave request email to manager:",
+      error.message
+    );
+  }
 
   res.status(201).json({ message: "Leave request submitted", leave });
 };
@@ -103,12 +119,27 @@ exports.updateLeaveStatus = async (req, res) => {
 
   await leave.save();
 
+  const approver = await User.findById(req.user.id);
+
   // Optional: Deduct leaves if approved
   if (status === "Approved") {
     const user = await User.findById(leave.user);
     if (user) {
       user.leaves = Math.max(0, user.leaves - leave.days);
       await user.save();
+      try {
+        await sendLeaveStatusEmail(
+          user.email,
+          user.name,
+          leave.startDate,
+          leave.endDate,
+          leave.reason,
+          status,
+          approver?.name || "Manager"
+        );
+      } catch (error) {
+        console.error("Failed to send approval email:", error.message);
+      }
     }
   }
 
