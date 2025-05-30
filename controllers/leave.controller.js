@@ -4,6 +4,8 @@ const Leave = require("../models/leave.model");
 const User = require("../models/user.model");
 const sendLeaveRequestEmail = require("../utils/sendLeaveRequestEmail"); // adjust path as needed
 const sendLeaveStatusEmail = require("../utils/sendLeaveStatusEmail");
+const sendManagerLeaveRequestEmail = require("../utils/sendManagerLeaveRequestEmail");
+
 // Employee: Apply for leave
 exports.applyLeave = async (req, res) => {
   const {
@@ -228,55 +230,85 @@ exports.getAllLeavesByMonth = async (req, res) => {
 
 // Manager: Apply for leave (to Admin)
 exports.managerApplyLeave = async (req, res) => {
-  const {
-    startDate,
-    endDate,
-    reason,
-    leaveType = "Casual",
-    isHalfDay = false,
-  } = req.body;
+  try {
+    const {
+      startDate,
+      endDate,
+      reason,
+      leaveType = "Casual",
+      isHalfDay = false,
+    } = req.body;
 
-  if (!startDate || !endDate || !reason) {
-    return res
-      .status(400)
-      .json({ message: "Start date, end date, and reason are required" });
+    if (!startDate || !endDate || !reason) {
+      return res.status(400).json({
+        message: "Start date, end date, and reason are required",
+      });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (end < start) {
+      return res
+        .status(400)
+        .json({ message: "End date cannot be before start date" });
+    }
+
+    const days = isHalfDay ? 0.5 : (end - start) / (1000 * 60 * 60 * 24) + 1;
+
+    const manager = await User.findById(req.user.id);
+    if (!manager || manager.role !== "Manager") {
+      return res
+        .status(403)
+        .json({ message: "Only managers can request here" });
+    }
+
+    // 📧 Admin email array
+    const adminEmails = [
+      "rakhejadevesh3@gmail.com",
+      "anotheradmin@example.com",
+    ];
+
+    // ✅ Fetch at least one admin from those emails
+    const admin = await User.findOne({
+      email: { $in: adminEmails },
+      role: "Admin",
+    });
+    if (!admin) {
+      return res
+        .status(404)
+        .json({ message: "No admin found with those emails" });
+    }
+
+    const leave = new Leave({
+      user: manager._id,
+      startDate: start,
+      endDate: end,
+      reason,
+      leaveType,
+      isHalfDay,
+      days,
+      requestedTo: admin._id, // ✅ REQUIRED FIELD
+      leaveBalanceAtRequest: manager.leaves,
+    });
+
+    await leave.save();
+
+    // 📤 Send email to all admins
+    await sendManagerLeaveRequestEmail(
+      adminEmails,
+      manager.name,
+      start,
+      end,
+      reason
+    );
+
+    res.status(201).json({
+      message: "Leave request submitted to admin(s)",
+      leave,
+    });
+  } catch (error) {
+    console.error("managerApplyLeave error:", error.message);
+    res.status(500).json({ message: "Server error" });
   }
-
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  if (end < start) {
-    return res
-      .status(400)
-      .json({ message: "End date cannot be before start date" });
-  }
-
-  const days = isHalfDay ? 0.5 : (end - start) / (1000 * 60 * 60 * 24) + 1;
-
-  const manager = await User.findById(req.user.id);
-  if (!manager) {
-    return res.status(404).json({ message: "Manager not found" });
-  }
-
-  // Find the admin(s)
-  const admin = await User.findOne({ role: "Admin" });
-
-  if (!admin) {
-    return res.status(404).json({ message: "No admin assigned" });
-  }
-
-  const leave = new Leave({
-    user: req.user.id,
-    startDate: start,
-    endDate: end,
-    reason,
-    leaveType,
-    isHalfDay,
-    days,
-    requestedTo: admin._id, // Requesting to admin
-    leaveBalanceAtRequest: manager.leaves,
-  });
-
-  await leave.save();
-
-  res.status(201).json({ message: "Leave request submitted to admin", leave });
 };
