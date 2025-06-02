@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema(
       index: true,
     },
     leaves: { type: Number, default: 0, min: 0 },
+    wfh: { type: Number, default: 2, min: 0 }, // 2 WFH per month by default
     team: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
     // Add this field to store Google OAuth2 refresh token

@@ -8,9 +8,10 @@ const leaveSchema = new mongoose.Schema(
     reason: { type: String, required: true, trim: true },
     leaveType: {
       type: String,
-      enum: ["Sick", "Casual", "Earned", "Unpaid", "Other"],
+      enum: ["Sick", "Casual", "Earned", "Unpaid", "Other", "WorkFromHome"],
       default: "Casual",
     },
+    isWFH: { type: Boolean, default: false }, // ✅ NEW FIELD
     days: { type: Number, required: true, min: 0.5 },
     isHalfDay: { type: Boolean, default: false },
     status: {

@@ -6,89 +6,121 @@ const sendLeaveRequestEmail = require("../utils/sendLeaveRequestEmail"); // adju
 const sendLeaveStatusEmail = require("../utils/sendLeaveStatusEmail");
 const sendManagerLeaveRequestEmail = require("../utils/sendManagerLeaveRequestEmail");
 
-// Employee: Apply for leave
+// Employee: Can apply for leave/work from home
 exports.applyLeave = async (req, res) => {
-  const {
-    startDate,
-    endDate,
-    reason,
-    leaveType = "Casual",
-    isHalfDay = false,
-  } = req.body;
-
-  if (!startDate || !endDate || !reason) {
-    return res
-      .status(400)
-      .json({ message: "Start date, end date, and reason are required" });
-  }
-
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  if (end < start) {
-    return res
-      .status(400)
-      .json({ message: "End date cannot be before start date" });
-  }
-
-  const days = isHalfDay ? 0.5 : (end - start) / (1000 * 60 * 60 * 24) + 1;
-
-  const employee = await User.findById(req.user.id);
-  if (!employee) {
-    return res.status(404).json({ message: "Employee not found" });
-  }
-
-  // Fetch the manager of this employee
-  const manager = await User.findOne({
-    role: "Manager",
-    team: req.user.id,
-  });
-
-  if (!manager) {
-    return res.status(404).json({ message: "No manager assigned" });
-  }
-
-  // Fetch all admins
-  const admins = await User.find({ role: "Admin" });
-
-  if (!admins.length) {
-    return res.status(404).json({ message: "No admins found" });
-  }
-
-  // Prepare requestedTo array including manager + all admins
-  const requestedToArray = [manager._id, ...admins.map((admin) => admin._id)];
-
-  const leave = new Leave({
-    user: req.user.id,
-    startDate: start,
-    endDate: end,
-    reason,
-    leaveType,
-    isHalfDay,
-    days,
-    requestedTo: requestedToArray,
-    leaveBalanceAtRequest: employee.leaves,
-  });
-
-  await leave.save();
-
   try {
-    // Collect all emails (manager + admins)
-    const emailList = [manager.email, ...admins.map((admin) => admin.email)];
-    await sendLeaveRequestEmail(
-      emailList,
-      employee.name,
+    const {
       startDate,
       endDate,
-      reason
-    );
-  } catch (error) {
-    console.error(
-      "Failed to send leave request email to manager/admins:",
-      error.message
-    );
-  }
+      reason,
+      leaveType = "Casual",
+      isHalfDay = false,
+      isWFH = false,
+    } = req.body;
 
-  res.status(201).json({ message: "Leave request submitted", leave });
+    // Basic validation
+    if (!startDate || !endDate || !reason) {
+      return res.status(400).json({
+        message: "Start date, end date, and reason are required",
+      });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (isNaN(start) || isNaN(end)) {
+      return res.status(400).json({ message: "Invalid date format" });
+    }
+
+    if (end < start) {
+      return res
+        .status(400)
+        .json({ message: "End date cannot be before start date" });
+    }
+
+    // Validate WFH logic
+    if (isWFH && leaveType !== "WorkFromHome") {
+      return res.status(400).json({
+        message: "Leave type must be 'WorkFromHome' if isWFH is true",
+      });
+    }
+
+    if (leaveType === "WorkFromHome" && !isWFH) {
+      return res.status(400).json({
+        message: "isWFH must be true if leaveType is 'WorkFromHome'",
+      });
+    }
+
+    // Calculate number of leave days
+    const millisecondsPerDay = 1000 * 60 * 60 * 24;
+    const days = isHalfDay
+      ? 0.5
+      : Math.floor((end - start) / millisecondsPerDay) + 1;
+
+    // Fetch employee from DB
+    const employee = await User.findById(req.user.id);
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    // Find manager of this employee (who has this employee in their team)
+    const manager = await User.findOne({
+      team: req.user.id,
+      role: "Manager",
+    });
+
+    if (!manager) {
+      return res.status(404).json({
+        message: "No manager found for this employee",
+      });
+    }
+
+    // Find all admins
+    const admins = await User.find({ role: "Admin" });
+    if (!admins.length) {
+      return res.status(404).json({ message: "No admins found" });
+    }
+
+    // Prepare requestedTo list (manager + admins)
+    const requestedToArray = [manager._id, ...admins.map((admin) => admin._id)];
+
+    // Create leave document
+    const leave = new Leave({
+      user: req.user.id,
+      startDate: start,
+      endDate: end,
+      reason,
+      leaveType,
+      isWFH,
+      isHalfDay,
+      days,
+      requestedTo: requestedToArray,
+      leaveBalanceAtRequest: employee.leaves ?? 0,
+      status: "Pending",
+    });
+
+    await leave.save();
+
+    // Send email notifications (optional)
+    try {
+      const emailList = [manager.email, ...admins.map((admin) => admin.email)];
+      await sendLeaveRequestEmail(
+        emailList,
+        employee.name,
+        startDate,
+        endDate,
+        reason,
+        leaveType
+      );
+    } catch (emailErr) {
+      console.error("Failed to send leave request email:", emailErr.message);
+    }
+
+    res.status(201).json({ message: "Leave request submitted", leave });
+  } catch (error) {
+    console.error("Error in applyLeave:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 };
 
 // Get logged-in user's leave requests
@@ -132,7 +164,7 @@ exports.updateLeaveStatus = async (req, res) => {
 
   leave.status = status;
 
-  // Assign remarks based on role
+  // Add remarks
   if (req.user.role === "Manager" && managerRemarks) {
     leave.managerRemarks = managerRemarks;
   } else if (req.user.role === "Admin" && adminRemarks) {
@@ -143,12 +175,16 @@ exports.updateLeaveStatus = async (req, res) => {
 
   const approver = await User.findById(req.user.id);
 
-  // Optional: Deduct leaves if approved
   if (status === "Approved") {
     const user = await User.findById(leave.user);
     if (user) {
-      user.leaves = Math.max(0, user.leaves - leave.days);
+      if (leave.leaveType === "WorkFromHome") {
+        user.wfh = Math.max(0, user.wfh - leave.days);
+      } else {
+        user.leaves = Math.max(0, user.leaves - leave.days);
+      }
       await user.save();
+
       try {
         await sendLeaveStatusEmail(
           user.email,
@@ -157,7 +193,7 @@ exports.updateLeaveStatus = async (req, res) => {
           leave.endDate,
           leave.reason,
           status,
-          approver?.name || "Manager"
+          approver?.name || req.user.role
         );
       } catch (error) {
         console.error("Failed to send approval email:", error.message);

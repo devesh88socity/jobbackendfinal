@@ -179,11 +179,11 @@ exports.updateLeaveBalance = async (req, res) => {
   }
 };
 
-// Admin: Update user details (role and/or leave balance)
+// Admin: Update user details (role, leaves, wfh)
 exports.updateUserDetails = async (req, res) => {
   try {
     const userId = req.params.id;
-    const { role, leaves } = req.body;
+    const { role, leaves, wfh } = req.body;
 
     const updateFields = {};
 
@@ -197,13 +197,25 @@ exports.updateUserDetails = async (req, res) => {
     }
 
     // Validate and set leave balance if provided
-    if (leaves != null) {
-      if (isNaN(leaves)) {
+    if (leaves !== undefined) {
+      const leavesNumber = Number(leaves);
+      if (isNaN(leavesNumber)) {
         return res
           .status(400)
           .json({ message: "Leave balance must be a number" });
       }
-      updateFields.leaves = leaves;
+      updateFields.leaves = leavesNumber;
+    }
+
+    // Validate and set WFH balance if provided
+    if (wfh !== undefined) {
+      const wfhNumber = Number(wfh);
+      if (isNaN(wfhNumber)) {
+        return res
+          .status(400)
+          .json({ message: "WFH balance must be a number" });
+      }
+      updateFields.wfh = wfhNumber;
     }
 
     if (Object.keys(updateFields).length === 0) {
@@ -226,6 +238,7 @@ exports.updateUserDetails = async (req, res) => {
         email: user.email,
         role: user.role,
         leaves: user.leaves,
+        wfh: user.wfh,
       },
     });
   } catch (error) {
