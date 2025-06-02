@@ -63,6 +63,22 @@ exports.applyLeave = async (req, res) => {
       return res.status(404).json({ message: "Employee not found" });
     }
 
+    // **Check leave balance only for leave types except WorkFromHome**
+    if (leaveType !== "WorkFromHome") {
+      if (employee.leaves < days) {
+        return res.status(400).json({
+          message: `Insufficient leave balance. You have ${employee.leaves} days left.`,
+        });
+      }
+    } else {
+      // For WorkFromHome, check WFH balance
+      if (employee.wfh < days) {
+        return res.status(400).json({
+          message: `Insufficient Work From Home balance. You have ${employee.wfh} days left.`,
+        });
+      }
+    }
+
     // Find manager of this employee (who has this employee in their team)
     const manager = await User.findOne({
       team: req.user.id,
