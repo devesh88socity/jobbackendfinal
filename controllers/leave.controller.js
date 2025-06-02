@@ -37,6 +37,7 @@ exports.applyLeave = async (req, res) => {
     return res.status(404).json({ message: "Employee not found" });
   }
 
+  // Fetch the manager of this employee
   const manager = await User.findOne({
     role: "Manager",
     team: req.user.id,
@@ -46,6 +47,16 @@ exports.applyLeave = async (req, res) => {
     return res.status(404).json({ message: "No manager assigned" });
   }
 
+  // Fetch all admins
+  const admins = await User.find({ role: "Admin" });
+
+  if (!admins.length) {
+    return res.status(404).json({ message: "No admins found" });
+  }
+
+  // Prepare requestedTo array including manager + all admins
+  const requestedToArray = [manager._id, ...admins.map((admin) => admin._id)];
+
   const leave = new Leave({
     user: req.user.id,
     startDate: start,
@@ -54,15 +65,17 @@ exports.applyLeave = async (req, res) => {
     leaveType,
     isHalfDay,
     days,
-    requestedTo: manager._id,
+    requestedTo: requestedToArray,
     leaveBalanceAtRequest: employee.leaves,
   });
 
   await leave.save();
+
   try {
-    console.log("hi red");
+    // Collect all emails (manager + admins)
+    const emailList = [manager.email, ...admins.map((admin) => admin.email)];
     await sendLeaveRequestEmail(
-      manager.email,
+      emailList,
       employee.name,
       startDate,
       endDate,
@@ -70,7 +83,7 @@ exports.applyLeave = async (req, res) => {
     );
   } catch (error) {
     console.error(
-      "Failed to send leave request email to manager:",
+      "Failed to send leave request email to manager/admins:",
       error.message
     );
   }
@@ -86,13 +99,20 @@ exports.getMyLeaves = async (req, res) => {
   res.json(leaves);
 };
 
-// Manager/Admin: Get team members' leave requests
+//Manager/Admin can see their  emmployess/manager leaves
 exports.getTeamLeaves = async (req, res) => {
-  const leaves = await Leave.find({ requestedTo: req.user.id })
-    .populate("user", "name email")
-    .sort({ createdAt: -1 });
+  try {
+    const leaves = await Leave.find({
+      requestedTo: req.user.id, // MongoDB will match if req.user.id is in the array
+    })
+      .populate("user", "name email")
+      .sort({ createdAt: -1 });
 
-  res.json(leaves);
+    res.json(leaves);
+  } catch (error) {
+    console.error("getTeamLeaves error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
 // Manager/Admin: Update leave status
@@ -269,15 +289,15 @@ exports.managerApplyLeave = async (req, res) => {
       "anotheradmin@example.com",
     ];
 
-    // ✅ Fetch at least one admin from those emails
-    const admin = await User.findOne({
+    const admins = await User.find({
       email: { $in: adminEmails },
       role: "Admin",
     });
-    if (!admin) {
+
+    if (!admins.length) {
       return res
         .status(404)
-        .json({ message: "No admin found with those emails" });
+        .json({ message: "No admins found with those emails" });
     }
 
     const leave = new Leave({
@@ -288,7 +308,7 @@ exports.managerApplyLeave = async (req, res) => {
       leaveType,
       isHalfDay,
       days,
-      requestedTo: admin._id, // ✅ REQUIRED FIELD
+      requestedTo: admins.map((admin) => admin._id), // array of admin ObjectIds
       leaveBalanceAtRequest: manager.leaves,
     });
 
@@ -309,6 +329,52 @@ exports.managerApplyLeave = async (req, res) => {
     });
   } catch (error) {
     console.error("managerApplyLeave error:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Manager/Admin: Get leaves requested by Managers assigned to the logged-in user
+exports.getManagerLeaves = async (req, res) => {
+  try {
+    const leaves = await Leave.find({
+      requestedTo: req.user.id,
+    })
+      .populate({
+        path: "user",
+        select: "name email role",
+        match: { role: "Manager" }, // only include if user.role is Manager
+      })
+      .sort({ createdAt: -1 });
+
+    // Filter out leaves where populate didn't find a matching user (role not Manager)
+    const filteredLeaves = leaves.filter((leave) => leave.user !== null);
+
+    res.json(filteredLeaves);
+  } catch (error) {
+    console.error("getManagerLeaves error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Manager/Admin: Get leaves requested by Employees assigned to the logged-in user
+exports.getEmployeeLeaves = async (req, res) => {
+  try {
+    const leaves = await Leave.find({
+      requestedTo: req.user.id,
+    })
+      .populate({
+        path: "user",
+        select: "name email role",
+        match: { role: "Employee" }, // only include if user.role is Employee
+      })
+      .sort({ createdAt: -1 });
+
+    // Filter out leaves where populate didn't find a matching user (role not Employee)
+    const filteredLeaves = leaves.filter((leave) => leave.user !== null);
+
+    res.json(filteredLeaves);
+  } catch (error) {
+    console.error("getEmployeeLeaves error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };

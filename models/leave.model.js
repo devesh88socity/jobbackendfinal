@@ -22,11 +22,13 @@ const leaveSchema = new mongoose.Schema(
     adminRemarks: { type: String, trim: true }, // ✅ NEW FIELD
     leaveBalanceAtRequest: { type: Number, min: 0 },
     isCancelled: { type: Boolean, default: false },
-    requestedTo: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+    requestedTo: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
+    ],
   },
   { timestamps: true }
 );

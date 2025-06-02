@@ -1,7 +1,7 @@
 const nodemailer = require("nodemailer");
 
 const sendLeaveRequestEmail = async (
-  managerEmail,
+  recipientEmails, // array of emails
   employeeName,
   startDate,
   endDate,
@@ -22,7 +22,7 @@ const sendLeaveRequestEmail = async (
 
   const mailOptions = {
     from: `"SO Attendance System" <${process.env.EMAIL_SENDER}>`,
-    to: managerEmail,
+    to: recipientEmails.join(","), // join array into comma-separated string
     subject: "📝 Leave Request from Employee",
     html: `
       <p>Hello,</p>

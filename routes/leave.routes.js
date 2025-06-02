@@ -61,14 +61,25 @@ router.patch(
  * ========================================================================= */
 
 /**
- * @route   GET /leaves/team
- * @desc    Get leave requests submitted to this manager/admin
+ * @route   GET /leaves/team/managers
+ * @desc    Get leave requests submitted by Managers to this manager/admin
  * @roles   Manager, Admin
  */
 router.get(
-  "/team",
+  "/team/managers",
   allowRoles("Manager", "Admin"),
-  leaveController.getTeamLeaves
+  leaveController.getManagerLeaves
+);
+
+/**
+ * @route   GET /leaves/team/employees
+ * @desc    Get leave requests submitted by Employees to this manager/admin
+ * @roles   Manager, Admin
+ */
+router.get(
+  "/team/employees",
+  allowRoles("Manager", "Admin"),
+  leaveController.getEmployeeLeaves
 );
 
 /**
