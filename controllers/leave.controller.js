@@ -249,11 +249,12 @@ exports.getLeavesByEmployee = async (req, res) => {
     const leaves = await Leave.find({ user: employeeId, isCancelled: false })
       .sort({ startDate: -1 }) // optional: sort latest first
       .select(
-        "_id startDate endDate status reason leaveType days isHalfDay managerRemarks"
+        "_id startDate endDate status reason leaveType days isHalfDay isWFH managerRemarks adminRemarks"
       );
 
     res.json(leaves);
   } catch (error) {
+    console.error("Error fetching employee leaves:", error);
     res.status(500).json({ message: "Error fetching leaves", error });
   }
 };
