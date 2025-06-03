@@ -260,14 +260,14 @@ exports.getLeavesByEmployee = async (req, res) => {
 
 exports.getAllLeavesByMonth = async (req, res) => {
   try {
-    const { month, year } = req.query;
+    const { month, year, sort = "asc" } = req.query;
 
     if (!month || !year) {
       return res.status(400).json({ message: "Month and year are required." });
     }
 
-    const parsedMonth = parseInt(month);
-    const parsedYear = parseInt(year);
+    const parsedMonth = parseInt(month, 10);
+    const parsedYear = parseInt(year, 10);
 
     if (isNaN(parsedMonth) || isNaN(parsedYear)) {
       return res
@@ -276,19 +276,26 @@ exports.getAllLeavesByMonth = async (req, res) => {
     }
 
     const startDate = new Date(parsedYear, parsedMonth - 1, 1);
-    const endDate = new Date(parsedYear, parsedMonth, 0, 23, 59, 59);
+    const endDate = new Date(parsedYear, parsedMonth, 0, 23, 59, 59, 999);
+
+    const sortOrder = sort === "desc" ? -1 : 1;
 
     const leaves = await Leave.find({
       startDate: { $lte: endDate },
       endDate: { $gte: startDate },
-    }).populate("user", "name email");
+    })
+      .populate("user", "name email")
+      .sort({ startDate: sortOrder });
 
     const formatted = leaves.map((leave) => ({
+      leaveId: leave._id.toString(),
       employeeName: leave.user?.name || "N/A",
       email: leave.user?.email || "N/A",
       fromDate: leave.startDate.toISOString().split("T")[0],
       toDate: leave.endDate.toISOString().split("T")[0],
       status: leave.status,
+      workFromHome: leave.isWFH || false,
+      leaveType: leave.leaveType || (leave.isWFH ? "WFH" : "Other"),
     }));
 
     return res.status(200).json(formatted);
