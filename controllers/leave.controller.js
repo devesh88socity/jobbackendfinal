@@ -308,7 +308,6 @@ exports.getAllLeavesByMonth = async (req, res) => {
   }
 };
 
-// Manager: Apply for leave (to Admin)
 exports.managerApplyLeave = async (req, res) => {
   try {
     const {
@@ -334,8 +333,6 @@ exports.managerApplyLeave = async (req, res) => {
         .json({ message: "End date cannot be before start date" });
     }
 
-    const days = isHalfDay ? 0.5 : (end - start) / (1000 * 60 * 60 * 24) + 1;
-
     const manager = await User.findById(req.user.id);
     if (!manager || manager.role !== "Manager") {
       return res
@@ -343,18 +340,48 @@ exports.managerApplyLeave = async (req, res) => {
         .json({ message: "Only managers can request here" });
     }
 
-    // 📧 Admin email array
+    // ✅ Block if a submission is already in progress
+    if (manager.isLeaveSubmitting) {
+      return res.status(429).json({
+        message:
+          "Leave request is already being processed. Please wait a moment.",
+      });
+    }
+
+    // ✅ Lock the submission
+    manager.isLeaveSubmitting = true;
+    await manager.save();
+
+    // ✅ Rate-limit check (1 request per minute)
+    const now = new Date();
+    if (manager.lastLeaveRequestAt) {
+      const timeDiff =
+        (now.getTime() - new Date(manager.lastLeaveRequestAt).getTime()) / 1000;
+      if (timeDiff < 60) {
+        manager.isLeaveSubmitting = false;
+        await manager.save();
+
+        return res.status(429).json({
+          message: `Please wait ${Math.ceil(60 - timeDiff)}s before reapplying`,
+        });
+      }
+    }
+
+    const days = isHalfDay ? 0.5 : (end - start) / (1000 * 60 * 60 * 24) + 1;
+
     const adminEmails = [
       "rakhejadevesh3@gmail.com",
       "anotheradmin@example.com",
     ];
-
     const admins = await User.find({
       email: { $in: adminEmails },
       role: "Admin",
     });
 
     if (!admins.length) {
+      manager.isLeaveSubmitting = false;
+      await manager.save();
+
       return res
         .status(404)
         .json({ message: "No admins found with those emails" });
@@ -368,13 +395,17 @@ exports.managerApplyLeave = async (req, res) => {
       leaveType,
       isHalfDay,
       days,
-      requestedTo: admins.map((admin) => admin._id), // array of admin ObjectIds
+      requestedTo: admins.map((admin) => admin._id),
       leaveBalanceAtRequest: manager.leaves,
     });
 
     await leave.save();
 
-    // 📤 Send email to all admins
+    // ✅ Update timestamps and release lock
+    manager.lastLeaveRequestAt = now;
+    manager.isLeaveSubmitting = false;
+    await manager.save();
+
     await sendManagerLeaveRequestEmail(
       adminEmails,
       manager.name,
@@ -383,12 +414,21 @@ exports.managerApplyLeave = async (req, res) => {
       reason
     );
 
-    res.status(201).json({
-      message: "Leave request submitted to admin(s)",
-      leave,
-    });
+    res
+      .status(201)
+      .json({ message: "Leave request submitted to admin(s)", leave });
   } catch (error) {
     console.error("managerApplyLeave error:", error.message);
+
+    // Attempt to release lock in case of error
+    try {
+      await User.findByIdAndUpdate(req.user.id, {
+        isLeaveSubmitting: false,
+      });
+    } catch (e) {
+      console.error("Failed to release submission lock:", e.message);
+    }
+
     res.status(500).json({ message: "Server error" });
   }
 };

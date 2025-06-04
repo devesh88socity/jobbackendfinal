@@ -30,6 +30,14 @@ const leaveSchema = new mongoose.Schema(
         required: true,
       },
     ],
+    lastLeaveRequestAt: {
+      type: Date,
+      default: null,
+    },
+    isLeaveSubmitting: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
