@@ -337,6 +337,7 @@ exports.managerApplyLeave = async (req, res) => {
       reason,
       leaveType = "Casual",
       isHalfDay = false,
+      isWFH,
     } = req.body;
 
     if (!startDate || !endDate || !reason) {
@@ -390,10 +391,7 @@ exports.managerApplyLeave = async (req, res) => {
 
     const days = isHalfDay ? 0.5 : (end - start) / (1000 * 60 * 60 * 24) + 1;
 
-    const adminEmails = [
-      "rakhejadevesh3@gmail.com",
-      "anotheradmin@example.com",
-    ];
+    const adminEmails = ["rakhejadevesh3@gmail.com"];
     const admins = await User.find({
       email: { $in: adminEmails },
       role: "Admin",
@@ -416,6 +414,7 @@ exports.managerApplyLeave = async (req, res) => {
       leaveType,
       isHalfDay,
       days,
+      isWFH: leaveType === "WorkFromHome" ? true : false,
       requestedTo: admins.map((admin) => admin._id),
       leaveBalanceAtRequest: manager.leaves,
     });
