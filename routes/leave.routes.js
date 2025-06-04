@@ -45,6 +45,12 @@ router.get(
   leaveController.getMyLeaves
 );
 
+router.get(
+  "/myleavesWFH",
+  allowRoles("Employee", "Manager"),
+  leaveController.getMyLeavesandWFH
+);
+
 /**
  * @route   PATCH /leaves/:id/cancel
  * @desc    Cancel a pending leave request

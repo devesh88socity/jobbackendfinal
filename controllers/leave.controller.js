@@ -147,6 +147,27 @@ exports.getMyLeaves = async (req, res) => {
   res.json(leaves);
 };
 
+exports.getMyLeavesandWFH = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Find user and select only 'leaves' and 'wfh' fields
+    const user = await User.findById(userId).select("leaves wfh");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({
+      leaves: user.leaves,
+      wfh: user.wfh,
+    });
+  } catch (err) {
+    console.error("Error fetching leave stats:", err);
+    res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
 //Manager/Admin can see their  emmployess/manager leaves
 exports.getTeamLeaves = async (req, res) => {
   try {
