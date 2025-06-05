@@ -4,14 +4,15 @@ const { google } = require("googleapis");
 const oAuth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  "https://developers.google.com/oauthplayground"
+  "https://developers.google.com/oauthplayground" // or your own redirect URI
 );
+
 oAuth2Client.setCredentials({
   refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
 });
 
 const sendManagerLeaveRequestEmail = async (
-  adminEmails, // ✅ Accepts array
+  adminEmails, // Array of recipient emails
   managerName,
   startDate,
   endDate,
@@ -32,17 +33,20 @@ const sendManagerLeaveRequestEmail = async (
       },
     });
 
-    const dashboardLink = `${process.env.FRONTEND_URL}`;
+    const dashboardLink = process.env.FRONTEND_URL;
 
     const mailOptions = {
       from: `"SO Attendance System" <${process.env.EMAIL_SENDER}>`,
-      to: adminEmails.join(", "), // ✅ Join array to string
+      to: adminEmails.join(", "), // convert array to comma-separated string
       subject: `📩 Leave Request from Manager ${managerName}`,
-      text: `${managerName} has requested a leave from ${new Date(
-        startDate
-      ).toDateString()} to ${new Date(
-        endDate
-      ).toDateString()}.\nReason: ${reason}\nReview it at: ${dashboardLink}`,
+      text: `
+        Manager ${managerName} has requested a leave:
+        - From: ${new Date(startDate).toDateString()}
+        - To: ${new Date(endDate).toDateString()}
+        - Reason: ${reason}
+        
+        Review it at: ${dashboardLink}
+      `,
       html: `
         <div style="font-family: Arial, sans-serif; color: #333;">
           <p>Hi Admin,</p>
@@ -62,21 +66,32 @@ const sendManagerLeaveRequestEmail = async (
             </tr>
           </table>
           <p>
-            <a href="${dashboardLink}" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px;">
-              Review Manager's Request
-            </a>
+            <a href="${dashboardLink}" target="_blank" style="
+              display: inline-block;
+              padding: 10px 20px;
+              background-color: #007bff;
+              color: #fff;
+              text-decoration: none;
+              border-radius: 4px;
+            ">Review Manager's Request</a>
           </p>
           <p>Regards,<br/>SO Attendance System</p>
         </div>
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+    const result = await transporter.sendMail(mailOptions);
     console.log(
-      `Manager leave request email sent to: ${adminEmails.join(", ")}`
+      `✅ Email sent to: ${adminEmails.join(", ")}`,
+      result.messageId
     );
+    return result;
   } catch (error) {
-    console.error("Error sending manager leave request email:", error.message);
+    console.error(
+      "❌ Error sending manager leave request email:",
+      error.message
+    );
+    throw error;
   }
 };
 
