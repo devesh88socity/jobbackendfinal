@@ -230,14 +230,32 @@ exports.updateLeaveStatus = async (req, res) => {
           leave.endDate,
           leave.reason,
           status,
-          approver?.name || req.user.role
+          approver?.name || req.user.role,
+          leave.leaveType
+        );
+      } catch (error) {
+        console.error("Failed to send approval email:", error.message);
+      }
+    }
+  } else {
+    const user = await User.findById(leave.user);
+    if (user) {
+      try {
+        await sendLeaveStatusEmail(
+          user.email,
+          user.name,
+          leave.startDate,
+          leave.endDate,
+          leave.reason,
+          status,
+          approver?.name || req.user.role,
+          leave.leaveType
         );
       } catch (error) {
         console.error("Failed to send approval email:", error.message);
       }
     }
   }
-
   res.json({ message: `Leave ${status.toLowerCase()}`, leave });
 };
 

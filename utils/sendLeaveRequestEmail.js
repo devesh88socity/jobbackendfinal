@@ -6,7 +6,8 @@ const sendLeaveRequestEmail = async (
   employeeName,
   startDate,
   endDate,
-  reason
+  reason,
+  leaveType
 ) => {
   const oAuth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -29,19 +30,21 @@ const sendLeaveRequestEmail = async (
         clientId: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-        accessToken: accessToken.token, // Required
+        accessToken: accessToken.token,
       },
     });
 
     const dashboardLink = `${process.env.FRONTEND_URL}`;
+    const formattedLeaveType =
+      leaveType === "WorkFromHome" ? "Work From Home" : `${leaveType} Leave`;
 
     const mailOptions = {
       from: `"SO Attendance System" <${process.env.EMAIL_SENDER}>`,
       to: recipientEmails.join(","),
-      subject: "📝 Leave Request from Employee",
+      subject: `📝 ${formattedLeaveType} Request from Employee ${employeeName}`,
       html: `
         <p>Hello,</p>
-        <p>You have received a new leave request from <strong>${employeeName}</strong>.</p>
+        <p>You have received a new ${formattedLeaveType} request from <strong>${employeeName}</strong>.</p>
         <ul>
           <li><strong>Start Date:</strong> ${new Date(
             startDate
