@@ -409,6 +409,25 @@ exports.managerApplyLeave = async (req, res) => {
 
     const days = isHalfDay ? 0.5 : (end - start) / (1000 * 60 * 60 * 24) + 1;
 
+    // ✅ Check leave balance
+    if (leaveType !== "WorkFromHome") {
+      if (manager.leaves < days) {
+        manager.isLeaveSubmitting = false;
+        await manager.save();
+        return res.status(400).json({
+          message: `Insufficient leave balance. You have ${manager.leaves} days left.`,
+        });
+      }
+    } else {
+      if (manager.wfh < days) {
+        manager.isLeaveSubmitting = false;
+        await manager.save();
+        return res.status(400).json({
+          message: `Insufficient Work From Home balance. You have ${manager.wfh} days left.`,
+        });
+      }
+    }
+
     const adminEmails = ["rakhejadevesh3@gmail.com"];
     const admins = await User.find({
       email: { $in: adminEmails },
