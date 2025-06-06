@@ -16,7 +16,8 @@ const sendManagerLeaveRequestEmail = async (
   managerName,
   startDate,
   endDate,
-  reason
+  reason,
+  leaveType
 ) => {
   try {
     const accessToken = await oAuth2Client.getAccessToken();
@@ -34,13 +35,15 @@ const sendManagerLeaveRequestEmail = async (
     });
 
     const dashboardLink = process.env.FRONTEND_URL;
+    const formattedLeaveType =
+      leaveType === "WorkFromHome" ? "Work From Home" : `${leaveType} Leave`;
 
     const mailOptions = {
       from: `"SO Attendance System" <${process.env.EMAIL_SENDER}>`,
       to: adminEmails.join(", "), // convert array to comma-separated string
-      subject: `📩 Leave Request from Manager ${managerName}`,
+      subject: `📩 ${formattedLeaveType} Request from Manager ${managerName}`,
       text: `
-        Manager ${managerName} has requested a leave:
+        Manager ${managerName} has requested a ${formattedLeaveType}:
         - From: ${new Date(startDate).toDateString()}
         - To: ${new Date(endDate).toDateString()}
         - Reason: ${reason}
@@ -50,7 +53,7 @@ const sendManagerLeaveRequestEmail = async (
       html: `
         <div style="font-family: Arial, sans-serif; color: #333;">
           <p>Hi Admin,</p>
-          <p>You have received a new leave request from <strong>Manager ${managerName}</strong>.</p>
+          <p>You have received a new ${formattedLeaveType} request from <strong>Manager ${managerName}</strong>.</p>
           <table style="margin: 10px 0; border-collapse: collapse;">
             <tr>
               <td style="padding: 4px 8px;"><strong>Start Date:</strong></td>

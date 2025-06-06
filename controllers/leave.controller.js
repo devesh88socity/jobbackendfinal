@@ -449,7 +449,8 @@ exports.managerApplyLeave = async (req, res) => {
       manager.name,
       start,
       end,
-      reason
+      reason,
+      leaveType
     );
 
     res
