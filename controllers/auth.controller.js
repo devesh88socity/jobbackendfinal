@@ -4,7 +4,7 @@ const User = require("../models/user.model");
 // Common cookie options
 const cookieOptions = {
   httpOnly: true,
-  sameSite: "Lax",
+  sameSite: "none", //keep Lax for testing only
   secure: process.env.NODE_ENV === "production",
 };
 
