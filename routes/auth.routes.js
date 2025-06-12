@@ -10,14 +10,14 @@ const isProduction = process.env.NODE_ENV === "production";
 // ==============================
 const accessTokenCookieOptions = {
   httpOnly: true,
-  sameSite: "none", //for production keep samesite as none
+  sameSite: "lax", //for production keep samesite as none
   secure: isProduction,
   maxAge: 15 * 60 * 1000, // 15 minutes
 };
 
 const refreshTokenCookieOptions = {
   httpOnly: true,
-  sameSite: "none", //for production keep samesite as none
+  sameSite: "lax", //for production keep samesite as none
   secure: isProduction,
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };

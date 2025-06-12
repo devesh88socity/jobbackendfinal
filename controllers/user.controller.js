@@ -4,19 +4,12 @@ const User = require("../models/user.model");
 
 // Get logged-in user's profile
 exports.getMyProfile = async (req, res) => {
-  const token = req.cookies.accessToken;
-  if (!token) return res.status(401).json({ message: "No access token" });
-
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
-
+    const user = await User.findById(req.user.id).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
-
-    res.status(200).json(user);
+    res.json(user);
   } catch (error) {
-    console.error("Error in /me:", error.message);
-    res.status(401).json({ message: "Invalid or expired token" });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
