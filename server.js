@@ -23,9 +23,16 @@ const isProduction = process.env.NODE_ENV === "production";
 // ==============================
 // CORS Configuration
 // ==============================
+// app.use(
+//   cors({
+//     origin: process.env.FRONTEND_URL || "http://localhost:3000",
+//     credentials: true,
+//   })
+// );
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: "https://jobfrontendfinal.vercel.app",
     credentials: true,
   })
 );
