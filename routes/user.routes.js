@@ -4,14 +4,14 @@ const userController = require("../controllers/user.controller");
 const authenticate = require("../middlewares/auth.middleware");
 const allowRoles = require("../middlewares/role.middleware");
 
+router.use(authenticate);
+
 /**
  * @route   GET /users/me
  * @desc    Get logged-in user's profile
  */
 
 router.get("/me", userController.getMyProfile);
-
-router.use(authenticate);
 
 /**
  * @route   GET /users/teams
