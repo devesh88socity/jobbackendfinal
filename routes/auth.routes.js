@@ -6,18 +6,18 @@ const authController = require("../controllers/auth.controller");
 const isProduction = process.env.NODE_ENV === "production";
 
 // ==============================
-// Cookie Options
+// Cookie Options (Use SameSite: 'None' for cross-origin cookies)
 // ==============================
 const accessTokenCookieOptions = {
   httpOnly: true,
-  sameSite: "lax", //for production keep samesite as none
+  sameSite: isProduction ? "None" : "Lax",
   secure: isProduction,
   maxAge: 15 * 60 * 1000, // 15 minutes
 };
 
 const refreshTokenCookieOptions = {
   httpOnly: true,
-  sameSite: "lax", //for production keep samesite as none
+  sameSite: isProduction ? "None" : "Lax",
   secure: isProduction,
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
