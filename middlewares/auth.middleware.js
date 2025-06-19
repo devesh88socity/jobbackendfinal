@@ -8,10 +8,10 @@ const authenticate = (req, res, next) => {
 
   const token = accessTokenFromCookie || accessTokenFromHeader;
 
-  console.log("🧪 Cookie Access Token:", accessTokenFromCookie);
-  console.log("🧪 Header Access Token:", accessTokenFromHeader);
-  console.log("🧪 Full Cookies Object:", req.cookies);
-  console.log("🧪 Authorization Header:", req.headers.authorization);
+  // console.log("🧪 Cookie Access Token:", accessTokenFromCookie);
+  // console.log("🧪 Header Access Token:", accessTokenFromHeader);
+  // console.log("🧪 Full Cookies Object:", req.cookies);
+  // console.log("🧪 Authorization Header:", req.headers.authorization);
 
   if (!token) {
     return res.status(401).json({
