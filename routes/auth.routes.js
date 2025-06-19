@@ -12,14 +12,14 @@ const accessTokenCookieOptions = {
   httpOnly: true,
   sameSite: isProduction ? "None" : "Lax",
   secure: isProduction,
-  maxAge: 15 * 60 * 1000, // 15 minutes
+  maxAge: 4 * 60 * 60 * 1000, // 4 hours
 };
 
 const refreshTokenCookieOptions = {
   httpOnly: true,
   sameSite: isProduction ? "None" : "Lax",
   secure: isProduction,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days
 };
 
 // ==============================
@@ -30,8 +30,7 @@ router.get(
   "/google",
   passport.authenticate("google", {
     scope: ["profile", "email", "https://mail.google.com/"],
-    accessType: "offline",
-    prompt: "consent",
+    session: false,
   })
 );
 

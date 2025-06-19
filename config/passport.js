@@ -4,6 +4,14 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 const sendWelcomeEmail = require("../utils/sendWelcomeEmail");
 
+// ✅ Inject custom authorization params into Google OAuth request
+GoogleStrategy.prototype.authorizationParams = function (options) {
+  return {
+    access_type: "offline",
+    prompt: "consent",
+  };
+};
+
 passport.use(
   new GoogleStrategy(
     {
@@ -11,8 +19,6 @@ passport.use(
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL:
         process.env.GOOGLE_REDIRECT_URI || "/api/auth/google/callback",
-      accessType: "offline",
-      prompt: "consent",
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -53,17 +59,18 @@ passport.use(
           );
         }
 
-        // Generate tokens
+        // Generate access token (15 min)
         const accessTokenJWT = jwt.sign(
           { id: user._id, role: user.role },
           process.env.JWT_SECRET,
-          { expiresIn: "15m", algorithm: "HS256" }
+          { expiresIn: "4h", algorithm: "HS256" }
         );
 
+        // Generate refresh token (7 days)
         const refreshTokenJWT = jwt.sign(
           { id: user._id },
           process.env.REFRESH_TOKEN_SECRET,
-          { expiresIn: "7d", algorithm: "HS256" }
+          { expiresIn: "365d", algorithm: "HS256" }
         );
 
         return done(null, {

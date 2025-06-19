@@ -12,7 +12,7 @@ const sendLeaveRequestEmail = async (
   const oAuth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    "https://developers.google.com/oauthplayground" // Or your own redirect URI
+    "http://localhost:5000/api/auth/google/callback"
   );
 
   oAuth2Client.setCredentials({
